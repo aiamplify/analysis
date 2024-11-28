@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Service Transcription Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #3b82f6;
+            --accent-color: #60a5fa;
+            --background-color: #0f172a;
+            --surface-color: #1e293b;
+            --text-color: #f8fafc;
+            --error-color: #ef4444;
+            --success-color: #22c55e;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: var(--background-color);
+            color: var(--text-color);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: var(--surface-color);
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo {
+            height: 2.5rem;
+            position: absolute;
+            left: 1.5rem;
+            filter: brightness(0) invert(1);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            font-size: 1rem;
+            background: var(--surface-color);
+            color: var(--text-color);
+            border: 1px solid var(--accent-color);
+        }
+
+        .button:hover {
+            background: var(--accent-color);
+            transform: translateY(-1px);
+        }
+
+        .button.recording {
+            background: var(--error-color);
+            border-color: var(--error-color);
+        }
+
+        .text-input-container {
+            background: var(--surface-color);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            margin: 2rem 0;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        #text-input {
+            width: 100%;
+            min-height: 150px;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--accent-color);
+            background: var(--background-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            resize: vertical;
+            margin-bottom: 1rem;
+        }
+
+        .transcript-container {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .transcript {
+            background: var(--surface-color);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        #transcript-text {
+            background: var(--background-color);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            min-height: 300px;
+            white-space: pre-wrap;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .legend {
+            background: var(--surface-color);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            height: fit-content;
+            min-width: 280px;
+        }
+
+        .legend h3 {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+            color: var(--accent-color);
+            text-align: center;
+            border-bottom: 1px solid var(--accent-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .legend p {
+            margin: 0.75rem 0;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            transition: background-color 0.2s;
+        }
+
+        .legend p:hover {
+            background: rgba(96, 165, 250, 0.1);
+        }
+
+        .legend span {
+            display: block;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            font-weight: 500;
+        }
+
+        #error-message {
+            color: var(--error-color);
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        #upload-status {
+            color: var(--accent-color);
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        /* Highlight styles */
+        .pii { color: var(--error-color); }
+        .issue { background-color: rgba(34, 197, 94, 0.2); }
+        .positive { font-style: italic; color: var(--success-color); }
+        .order { background-color: rgba(234, 179, 8, 0.2); }
+
+        /* Legend styles to match highlights */
+        .legend span.pii {
+            color: var(--error-color);
+        }
+        
+        .legend span.issue {
+            background-color: rgba(34, 197, 94, 0.2);
+            color: var(--text-color);
+        }
+        
+        .legend span.positive {
+            font-style: italic;
+            color: var(--success-color);
+        }
+        
+        .legend span.order {
+            background-color: rgba(234, 179, 8, 0.2);
+            color: var(--text-color);
+        }
+
+        @media (max-width: 768px) {
+            .transcript-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .legend {
+                min-width: unset;
+                width: 100%;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .button {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="{{ url_for('static', filename='AAI_Logo_Primary.png') }}" alt="AssemblyAI Logo" class="logo">
+        <h1>Customer Service Transcription Analysis</h1>
+    </div>
+
+    <div class="container">
+        <div class="controls">
+            <button id="toggle-btn" class="button">
+                🎤 Start Recording
+            </button>
+            <input type="file" id="audio-file" accept="audio/*" style="display: none;">
+            <button id="upload-btn" class="button">
+                📁 Upload Audio File
+            </button>
+        </div>
+
+        <div id="error-message"></div>
+        <div id="upload-status"></div>
+
+        <div class="text-input-container">
+            <textarea id="text-input" placeholder="Or paste your text here for analysis..."></textarea>
+            <button id="analyze-btn" class="button">
+                📝 Analyze Text
+            </button>
+        </div>
+
+        <div class="transcript-container">
+            <div class="transcript">
+                <h2>Analysis Results</h2>
+                <div id="transcript-text"></div>
+            </div>
+            <div class="legend">
+                <h3>Highlight Legend</h3>
+                <p><span class="pii">Personal Information (PII)</span></p>
+                <p><span class="issue">Product/Service Issues</span></p>
+                <p><span class="positive">Positive Feedback</span></p>
+                <p><span class="order">Order Information</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        const toggleBtn = document.getElementById('toggle-btn');
+        const transcriptText = document.getElementById('transcript-text');
+        const errorMessage = document.getElementById('error-message');
+        const uploadBtn = document.getElementById('upload-btn');
+        const audioFileInput = document.getElementById('audio-file');
+        const uploadStatus = document.getElementById('upload-status');
+        const textInput = document.getElementById('text-input');
+        const analyzeBtn = document.getElementById('analyze-btn');
+
+        let isRecording = false;
+        let analyzedText = '';
+
+        function updateRecordingState(recording) {
+            isRecording = recording;
+            toggleBtn.textContent = isRecording ? '🛑 Stop Recording' : '🎤 Start Recording';
+            toggleBtn.classList.toggle('recording', isRecording);
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.opacity = '1';
+            setTimeout(() => {
+                errorMessage.style.opacity = '0';
+            }, 5000);
+        }
+
+        function updateStatus(message) {
+            uploadStatus.textContent = message;
+            if (message) {
+                uploadStatus.style.opacity = '1';
+            } else {
+                uploadStatus.style.opacity = '0';
+            }
+        }
+
+        toggleBtn.addEventListener('click', () => {
+            updateRecordingState(!isRecording);
+            socket.emit('toggle_transcription');
+        });
+
+        uploadBtn.addEventListener('click', () => {
+            audioFileInput.click();
+        });
+
+        audioFileInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('audio', file);
+
+            updateStatus('Uploading and transcribing...');
+            errorMessage.textContent = '';
+            transcriptText.innerHTML = '';
+            analyzedText = '';
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('Upload failed');
+                }
+
+                updateStatus('Processing audio...');
+            } catch (error) {
+                showError('Error uploading file: ' + error.message);
+                updateStatus('');
+            }
+        });
+
+        analyzeBtn.addEventListener('click', async () => {
+            const text = textInput.value.trim();
+            if (!text) {
+                showError('Please enter some text to analyze');
+                return;
+            }
+
+            updateStatus('Analyzing text...');
+            errorMessage.textContent = '';
+            transcriptText.innerHTML = '';
+            analyzedText = '';
+
+            try {
+                const response = await fetch('/analyze-text', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Analysis failed');
+                }
+
+                updateStatus('Processing...');
+            } catch (error) {
+                showError('Error analyzing text: ' + error.message);
+                updateStatus('');
+            }
+        });
+
+        socket.on('error', data => {
+            console.error('Error:', data.message);
+            showError(data.message);
+            updateRecordingState(false);
+        });
+
+        socket.on('partial_transcript', data => {
+            transcriptText.innerHTML = analyzedText + data.text;
+        });
+
+        socket.on('formatted_transcript', data => {
+            analyzedText = data.text + "<br>";
+            transcriptText.innerHTML = analyzedText;
+            updateStatus('');
+        });
+
+        socket.on('file_transcript', data => {
+            updateStatus('');
+            analyzedText = data.text + "<br>";
+            transcriptText.innerHTML = analyzedText;
+        });
+    </script>
+</body>
+</html>
